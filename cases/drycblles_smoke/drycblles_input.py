@@ -25,7 +25,10 @@ smoke = np.zeros(np.size(z))
 
 # linearly stratified profile
 for k in range(kmax):
-    th  [k] = 300. + dthetadz*z[k]
+    th[k] = 288 + 0.28*(z[k] - 687.5)
+
+for k in range(kmax):
+    smoke[k] = 1. - 0.04*(z[k] - 687.5)
 
 """
 # well mixed profile with jump
