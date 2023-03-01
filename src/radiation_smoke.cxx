@@ -21,26 +21,55 @@
 
 #include "radiation_smoke.h"
 #include "constants.h"
+#include <algorithm>
+#include <cmath>
 
-namespace
-{
-    template<typename TF>
-    void calc_radiation_tendency(
-            TF* thlt, const TF* smoke,
-            const TF* rho, const TF* dz,
-            const TF f0, const TF ka,
-            const int istart, const int iend, const int jstart, const int jend, const int kstart, const int kend,
-            const int jj, const int kk)
-    {
-        for (int k=kstart; k<kend; ++k)
-            for (int j=jstart; j<jend; ++j)
-                #pragma ivdep
-                for (int i=istart; i<iend; ++i)
-                {
-                    const int ijk = i + j*jj + k*kk;
-                }
-    }
-}
+ namespace
+ {
+     template<typename TF>
+     void calc_radiation_tendency(
+             TF* thlt, const TF* smoke,
+             const TF* rho, const TF* dz,
+             const TF f0, const TF ka,
+             const int istart, const int iend, const int jstart, const int jend, const int kstart, const int kend, 
+             const int icells, const int jcells, const int ijcells, const int ncells)
+     {
+         // vertical integration
+         TF smoke_int[ijcells];
+         std::fill(smoke_int, smoke_int+ijcells, TF(0));
+         
+         for (int i=istart; i<iend; ++i)
+             for (int j=jstart; j<jend; ++j)
+                 {
+                     const int ij = i + j*icells;
+                     for (int k=kstart; k<kend; ++k)
+                     {
+                         const int ijk = i + j*icells + k*ijcells;
+                         smoke_int[ij] += smoke[ijk] * rho[k] * dz[k];
+                     }
+                 }
+         // radiative flux and assiciated tendency
+         
+         TF rad_flux[ncells];
+         std::fill(rad_flux, rad_flux+ncells, TF(0));
+         
+         for (int i=istart; i<iend; ++i)
+             for (int j=jstart; j<jend; ++j)
+             {
+                 const int ij = i + j*icells;
+                 for (int k=kstart+1; k<kend; ++k)
+                 {
+                     const int ijk = i + j*icells + k*ijcells;
+                     const int ijkm1 = i + j*icells + (k-1)*ijcells;
+                     smoke_int[ij] -= smoke[ijk] * rho[k] * dz[k];
+                     rad_flux[ijk] = f0 * exp(-1. * ka * smoke_int[ij]);
+                     thlt[ijk] -= (rad_flux[ijk] - rad_flux[ijkm1])/(rho[k] * Constants::cp<float> * dz[k]);
+                 }
+             }
+     }
+ }
+
+
 
 template<typename TF>
 Radiation_smoke<TF>::Radiation_smoke(Master& masterin, Grid<TF>& gridin, Fields<TF>& fieldsin, Input& inputin) :
@@ -82,8 +111,8 @@ void Radiation_smoke<TF>::exec(
             fields.st.at("th")->fld.data(), fields.sp.at("smoke")->fld.data(),
             fields.rhoref.data(), gd.dz.data(),
             f0, ka,
-            gd.istart, gd.iend, gd.jstart, gd.jend, gd.kstart, gd.kend,
-            gd.icells, gd.ijcells);
+            gd.istart, gd.iend, gd.jstart, gd.jend, gd.kstart, gd.kend, 
+            gd.icells, gd. jcells, gd.ijcells, gd.ncells);
 }
 
 #ifdef FLOAT_SINGLE
