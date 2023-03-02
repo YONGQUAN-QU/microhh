@@ -45,7 +45,7 @@
                      for (int k=kstart; k<kend; ++k)
                      {
                          const int ijk = i + j*icells + k*ijcells;
-                         smoke_int[ij] += max(0, smoke[ijk] * rho[k] * dz[k]);
+                         smoke_int[ij] += std::max(0, smoke[ijk] * rho[k] * dz[k]);
                      }
                  }
          // radiative flux and assiciated tendency
@@ -61,8 +61,8 @@
                  {
                      const int ijk = i + j*icells + k*ijcells;
                      const int ijkm1 = i + j*icells + (k-1)*ijcells;
-                     smoke_int[ij] -= max(0, smoke[ijk] * rho[k] * dz[k]);
-                     rad_flux[ijk] = f0 * exp(-1. * ka * smoke_int[ij]);
+                     smoke_int[ij] -= std::max(0, smoke[ijk] * rho[k] * dz[k]);
+                     rad_flux[ijk] = f0 * std::exp(-1. * ka * smoke_int[ij]);
                      thlt[ijk] -= (rad_flux[ijk] - rad_flux[ijkm1])/(rho[k] * Constants::cp<float> * dz[k]);
                  }
              }
