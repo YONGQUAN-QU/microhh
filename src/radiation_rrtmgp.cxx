@@ -466,12 +466,12 @@ namespace
             Float* const restrict sw_flux_up_sfc,
             Float* const restrict sw_flux_dn_dif,
             Float* const restrict tmp_2d,
-            const double* const restrict sw_flux_dn,
-            const double* const restrict sw_flux_dn_dir,
+            const Float* const restrict sw_flux_dn,
+            const Float* const restrict sw_flux_dn_dir,
             const Float* const restrict kernel_x,
             const Float* const restrict kernel_y,
             const int n_steps,
-            const double alb_dir, const double alb_dif,
+            const Float alb_dir, const Float alb_dif,
             const int istart, const int iend,
             const int jstart, const int jend,
             const int igc, const int jgc,
@@ -1317,7 +1317,7 @@ void Radiation_rrtmgp<TF>::set_sun_location(Timeloop<TF>& timeloop)
 }
 
 template<typename TF>
-void Radiation_rrtmgp<TF>::set_background_column_shortwave(Thermo<TF>& thermo)
+void Radiation_rrtmgp<TF>::set_background_column_shortwave(const TF p_top)
 {
     auto& gd = grid.get_grid_data();
 
@@ -1339,7 +1339,7 @@ void Radiation_rrtmgp<TF>::set_background_column_shortwave(Thermo<TF>& thermo)
     solve_shortwave_column(
             optical_props_sw,
             sw_flux_up_col, sw_flux_dn_col, sw_flux_dn_dir_col, sw_flux_net_col,
-            sw_flux_dn_dir_inc, sw_flux_dn_dif_inc, thermo.get_basestate_vector("ph")[gd.kend],
+            sw_flux_dn_dir_inc, sw_flux_dn_dif_inc, p_top,
             gas_concs_col,
             *kdist_sw,
             col_dry,
@@ -1460,7 +1460,10 @@ void Radiation_rrtmgp<TF>::exec(
 
                     // Calculate new background column.
                     if (is_day(this->mu0))
-                        set_background_column_shortwave(thermo);
+                    {
+                        const TF p_top = thermo.get_basestate_vector("ph")[gd.kend];
+                        set_background_column_shortwave(p_top);
+                    }
                 }
 
                 Array<Float,2> flux_dn_dir({gd.imax*gd.jmax, gd.ktot+1});
@@ -1611,7 +1614,6 @@ std::vector<TF>& Radiation_rrtmgp<TF>::get_surface_radiation(const std::string& 
 #endif
 
 
-#ifndef USECUDA
 template<typename TF>
 void Radiation_rrtmgp<TF>::exec_all_stats(
         Stats<TF>& stats, Cross<TF>& cross,
@@ -1647,7 +1649,13 @@ void Radiation_rrtmgp<TF>::exec_all_stats(
         }
 
         if (do_column)
-            column.calc_column(name, array.fld.data(), no_offset);
+        {
+            // This `exec_all_stats` routine is used by both the cpu and gpu code.
+            // Unlike other `calc_column()` calls, the data for radiation is already on
+            // the cpu, so no copy from gpu to cpu is needed.
+            bool copy_from_gpu = false;
+            column.calc_column(name, array.fld.data(), no_offset, copy_from_gpu);
+        }
     };
 
     try
@@ -1697,9 +1705,9 @@ void Radiation_rrtmgp<TF>::exec_all_stats(
         #endif
     }
 }
-#endif
 
 
+#ifndef USECUDA
 template<typename TF>
 void Radiation_rrtmgp<TF>::exec_individual_column_stats(
         Column<TF>& column, Thermo<TF>& thermo, Timeloop<TF>& timeloop, Stats<TF>& stats)
@@ -1819,7 +1827,10 @@ void Radiation_rrtmgp<TF>::exec_individual_column_stats(
 
                 // Calculate new background column.
                 if (is_day(this->mu0))
-                    set_background_column_shortwave(thermo);
+                {
+                    const TF p_top = thermo.get_basestate_vector("ph")[gd.kend];
+                    set_background_column_shortwave(p_top);
+                }
             }
 
             if (!is_day(this->mu0))
@@ -1867,7 +1878,6 @@ void Radiation_rrtmgp<TF>::exec_individual_column_stats(
             }
         }
 
-
     }
     catch (std::exception& e)
     {
@@ -1881,6 +1891,8 @@ void Radiation_rrtmgp<TF>::exec_individual_column_stats(
 
     fields.release_tmp(tmp);
 }
+#endif
+
 
 template<typename TF>
 void Radiation_rrtmgp<TF>::exec_longwave(

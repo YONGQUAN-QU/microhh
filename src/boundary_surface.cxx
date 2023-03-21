@@ -388,9 +388,6 @@ Boundary_surface<TF>::Boundary_surface(
 template<typename TF>
 Boundary_surface<TF>::~Boundary_surface()
 {
-    #ifdef USECUDA
-    clear_device();
-    #endif
 }
 
 template<typename TF>
@@ -457,7 +454,7 @@ void Boundary_surface<TF>::init(Input& inputin, Thermo<TF>& thermo)
     process_input(inputin, thermo);
 
     // 3. Allocate and initialize the 2D surface fields.
-    init_surface(inputin);
+    init_surface(inputin, thermo);
 
     // 4. Initialize the boundary cyclic.
     boundary_cyclic.init();
@@ -468,6 +465,11 @@ void Boundary_surface<TF>::process_input(Input& inputin, Thermo<TF>& thermo)
 {
     // Switch between heterogeneous and homogeneous z0's
     sw_constant_z0 = inputin.get_item<bool>("boundary", "swconstantz0", "", true);
+
+    #ifdef USECUDA
+    if (!sw_constant_z0)
+        throw std::runtime_error("\"boundary_surface\" with heterogeneous z0s is not (yet) supported");
+    #endif
 
     // Switch for z0 as function of u* (Charnock relation)
     sw_charnock = inputin.get_item<bool>("boundary", "swcharnock", "", false);
@@ -488,6 +490,7 @@ void Boundary_surface<TF>::process_input(Input& inputin, Thermo<TF>& thermo)
         std::string msg = "Neumann bc is not supported in surface model";
         throw std::runtime_error(msg);
     }
+
     // read the ustar value only if fixed fluxes are prescribed
     else if (mbcbot == Boundary_type::Ustar_type)
         ustarin = inputin.get_item<TF>("boundary", "ustar", "");
@@ -536,7 +539,7 @@ void Boundary_surface<TF>::process_input(Input& inputin, Thermo<TF>& thermo)
 }
 
 template<typename TF>
-void Boundary_surface<TF>::init_surface(Input& input)
+void Boundary_surface<TF>::init_surface(Input& input, Thermo<TF>& thermo)
 {
     auto& gd = grid.get_grid_data();
 
@@ -545,7 +548,8 @@ void Boundary_surface<TF>::init_surface(Input& input)
 
     dudz_mo.resize(gd.ijcells);
     dvdz_mo.resize(gd.ijcells);
-    dbdz_mo.resize(gd.ijcells);
+    if (thermo.get_switch() != "0")
+        dbdz_mo.resize(gd.ijcells);
 
     if (sw_constant_z0)
         nobuk.resize(gd.ijcells);
@@ -575,7 +579,7 @@ void Boundary_surface<TF>::init_surface(Input& input)
 }
 
 template<typename TF>
-void Boundary_surface<TF>::load(const int iotime)
+void Boundary_surface<TF>::load(const int iotime, Thermo<TF>& thermo)
 {
     auto tmp1 = fields.get_tmp();
     int nerror = 0;
@@ -604,7 +608,8 @@ void Boundary_surface<TF>::load(const int iotime)
     // eddy viscosity use the gradients from the previous time step.
     load_2d_field(dudz_mo.data(), "dudz_mo", iotime);
     load_2d_field(dvdz_mo.data(), "dvdz_mo", iotime);
-    load_2d_field(dbdz_mo.data(), "dbdz_mo", iotime);
+    if (thermo.get_switch() != "0")
+        load_2d_field(dbdz_mo.data(), "dbdz_mo", iotime);
 
     // The `fld->gradbot`'s are only needed for flux BCs, required by
     // `set_ghost_cells()` at the start of the time loop.
@@ -635,7 +640,7 @@ void Boundary_surface<TF>::load(const int iotime)
 }
 
 template<typename TF>
-void Boundary_surface<TF>::save(const int iotime)
+void Boundary_surface<TF>::save(const int iotime, Thermo<TF>& thermo)
 {
     auto tmp1 = fields.get_tmp();
     int nerror = 0;
@@ -662,7 +667,8 @@ void Boundary_surface<TF>::save(const int iotime)
     // eddy viscosity use the gradients from the previous time step.
     save_2d_field(dudz_mo.data(), "dudz_mo", iotime);
     save_2d_field(dvdz_mo.data(), "dvdz_mo", iotime);
-    save_2d_field(dbdz_mo.data(), "dbdz_mo", iotime);
+    if (thermo.get_switch() != "0")
+        save_2d_field(dbdz_mo.data(), "dbdz_mo", iotime);
 
     // The `fld->gradbot`'s are only needed for flux BCs, required by
     // `set_ghost_cells()` at the start of the time loop.
@@ -913,8 +919,9 @@ void Boundary_surface<TF>::exec(
                     mbcbot, thermobc, boundary_cyclic);
 
         fields.release_tmp(buoy);
-        fields.release_tmp(dutot);
     }
+
+    fields.release_tmp(dutot);
 
     // Calculate the surface value, gradient and flux depending on the chosen boundary condition.
     // Momentum:
@@ -961,18 +968,21 @@ void Boundary_surface<TF>::exec(
             gd.kstart,
             gd.icells, gd.ijcells);
 
-    auto buoy = fields.get_tmp();
-    thermo.get_buoyancy_fluxbot(buoy->flux_bot, false);
+    if (thermo.get_switch() != "0")
+    {
+        auto buoy = fields.get_tmp();
+        thermo.get_buoyancy_fluxbot(buoy->flux_bot, false);
 
-    bsk::calc_dbdz_mo(
-            dbdz_mo.data(), buoy->flux_bot.data(),
-            ustar.data(), obuk.data(),
-            gd.z[gd.kstart],
-            gd.istart, gd.iend,
-            gd.jstart, gd.jend,
-            gd.icells);
+        bsk::calc_dbdz_mo(
+                dbdz_mo.data(), buoy->flux_bot.data(),
+                ustar.data(), obuk.data(),
+                gd.z[gd.kstart],
+                gd.istart, gd.iend,
+                gd.jstart, gd.jend,
+                gd.icells);
 
-    fields.release_tmp(buoy);
+        fields.release_tmp(buoy);
+    }
 }
 #endif
 

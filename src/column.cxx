@@ -83,8 +83,18 @@ void Column<TF>::create(Input& inputin, Timeloop<TF>& timeloop, std::string sim_
 
     for (size_t n=0; n<coordx.size(); ++n)
     {
-        const int i = static_cast<int>(std::floor(coordx[n]/gd.dx));
-        const int j = static_cast<int>(std::floor(coordy[n]/gd.dy));
+        if ( (coordx[n] < 0) || (coordx[n] > gd.xsize) || (coordy[n] < 0) || (coordy[n] > gd.ysize) )
+        {
+            std::string error = "Column #" + std::to_string(n) + " is outside the domain!";
+            throw std::runtime_error(error);
+        }
+
+        int i = static_cast<int>(std::floor(coordx[n]/gd.dx));
+        int j = static_cast<int>(std::floor(coordy[n]/gd.dy));
+
+        // If column is at `xsize` or `ysize`, put it at itot/jtot-1:
+        i = std::min(i, gd.itot-1);
+        j = std::min(j, gd.jtot-1);
 
         columns.emplace_back(Column_struct{});
         columns.back().coord = {i, j};
@@ -311,6 +321,7 @@ void Column<TF>::calc_column(
         }
     }
 }
+#endif
 
 template<typename TF>
 void Column<TF>::set_individual_column(
@@ -337,6 +348,7 @@ void Column<TF>::set_individual_column(
     throw std::runtime_error("Cant set individual column for i,j=" + std::to_string(i_col) + "," + std::to_string(j_col));
 }
 
+#ifndef USECUDA
 template<typename TF>
 void Column<TF>::calc_time_series(
         std::string name, const TF* const restrict data, const TF offset)

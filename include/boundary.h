@@ -102,8 +102,8 @@ class Boundary
         virtual void exec_column(Column<TF>&); ///< Execute column statistics of surface
         virtual void exec_cross(Cross<TF>&, unsigned long) {}; ///< Execute cross statistics of surface
 
-        virtual void load(const int) {};
-        virtual void save(const int) {};
+        virtual void load(const int, Thermo<TF>&) {};
+        virtual void save(const int, Thermo<TF>&) {};
 
         // Get functions for various 2D fields
         virtual const std::vector<TF>& get_z0m() const;
@@ -122,6 +122,7 @@ class Boundary
         virtual void prepare_device();
         virtual void forward_device();
         virtual void backward_device();
+        virtual void clear_device();
         #endif
 
     protected:
@@ -170,7 +171,6 @@ class Boundary
         void process_inflow(Input&, Netcdf_handle&); ///< Process the time dependent settings from the ini file.
 
         #ifdef USECUDA
-        void clear_device();
         std::map<std::string, TF*> inflow_profiles_g;
         #endif
 

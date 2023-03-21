@@ -163,20 +163,19 @@ class Radiation_rrtmgp : public Radiation<TF>
                 Array_gpu<Float,2>&, Array_gpu<Float,2>&, Array_gpu<Float,2>&,
                 const Array_gpu<Float,2>&, const Array_gpu<Float,2>&, const Array_gpu<Float,1>&,
                 const Array_gpu<Float,2>&, const Array_gpu<Float,2>&, const Array_gpu<Float,2>&,
-                const bool);
+                const bool, const int);
 
         void exec_shortwave(
                 Thermo<TF>&, Timeloop<TF>&, Stats<TF>&,
                 Array_gpu<Float,2>&, Array_gpu<Float,2>&, Array_gpu<Float,2>&, Array_gpu<Float,2>&,
                 const Array_gpu<Float,2>&, const Array_gpu<Float,2>&,
                 const Array_gpu<Float,2>&, const Array_gpu<Float,2>&, const Array_gpu<Float,2>&,
-                const bool);
+                const bool, const int);
         #endif
 
         bool is_day(const Float); // Switch between day/night, based on sza
         void set_sun_location(Timeloop<TF>&);
-        void set_background_column_shortwave(Thermo<TF>&);
-
+        void set_background_column_shortwave(const TF);
 
         const std::string tend_name = "rad";
         const std::string tend_longname = "Radiation";
@@ -185,6 +184,10 @@ class Radiation_rrtmgp : public Radiation<TF>
         bool sw_shortwave;
         bool sw_clear_sky_stats;
         bool sw_fixed_sza;
+
+        // Make sure that the sw radiation is tuned at the first `exec()`. This
+        // ensures that sw is tuned for the full 3D field, and not for the column stats.
+        bool sw_is_tuned = false;
 
         double dt_rad;
         unsigned long idt_rad;
