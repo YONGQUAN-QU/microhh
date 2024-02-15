@@ -1,0 +1,14 @@
+/glade/derecho/scratch/yongquan/microhh/build/CMakeFiles/edit_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/CMakeFiles/rebuild_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src_kernels/CMakeFiles/rte_rrtmgp_kernels.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src_kernels/CMakeFiles/edit_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src_kernels/CMakeFiles/rebuild_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src/CMakeFiles/rte_rrtmgp.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src/CMakeFiles/edit_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/rte-rrtmgp-cpp/src/CMakeFiles/rebuild_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/src/CMakeFiles/microhhc.dir
+/glade/derecho/scratch/yongquan/microhh/build/src/CMakeFiles/edit_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/src/CMakeFiles/rebuild_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/main/CMakeFiles/microhh.dir
+/glade/derecho/scratch/yongquan/microhh/build/main/CMakeFiles/edit_cache.dir
+/glade/derecho/scratch/yongquan/microhh/build/main/CMakeFiles/rebuild_cache.dir
